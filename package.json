@@ -1,0 +1,20 @@
+{
+  "name": "hephaistos",
+  "version": "0.0.1",
+  "description": "Input: .c file, Output: analysis",
+  "main": "hephaistos.js",
+  "scripts": {
+    "test": "mocha --recursive test/"
+  },
+  "author": "Louis Cherel",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^1.18.3",
+    "cookie-parser": "^1.4.3",
+    "diff": "^3.5.0",
+    "express": "^4.16.3",
+    "morgan": "^1.9.0",
+    "npm": "^6.2.0",
+    "xml2js": "^0.4.19"
+  }
+}

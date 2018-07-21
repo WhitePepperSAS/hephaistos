@@ -1,0 +1,11 @@
+--dont-break-procedure-type
+--no-space-after-function-call-names
+--no-space-after-parentheses
+--no-tabs
+--tab-size2
+--braces-after-if-line
+--brace-indent0
+--standard-output
+--break-before-boolean-operator
+--cuddle-do-while
+// --break-function-decl-args

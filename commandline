@@ -1,0 +1,1 @@
+curl -d "{\"content\":\"$(base64 -w0 test1.c)\"}" -X POST -H "Content-Type: application/json" http://127.0.0.1:8080/analyze

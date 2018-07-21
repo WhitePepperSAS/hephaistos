@@ -1,0 +1,5 @@
+[
+  { "directory": "/home/louis/pepper/EFREI/1A/EPR2/Livrables/testsources",
+    "command": "/usr/bin/gcc -o output.bin test1.c",
+    "file": "test1.c" }
+]
