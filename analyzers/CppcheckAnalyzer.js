@@ -39,7 +39,9 @@ class CppcheckAnalyzer extends Analyzer {
         reports.push({
           source: 'cppcheck',
           line: err.location ? err.location[0].$.line : undefined,
-          type: err.$.id,
+          flag: err.$.id,
+          type: '',
+          cwe: err.$.cwe,
           category: err.$.severity,
           message: err.$.msg
         })

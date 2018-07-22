@@ -21,7 +21,7 @@ class GccAnalyzer extends Analyzer {
     const lines = output.split('\n').map(input => input.replace('\r', ''))
 
     lines.forEach(line => {
-      const parsed = line.match(/^<stdin>:([0-9]*):([0-9]*): (warning|error): (.*)$/)
+      const parsed = line.match(/^<stdin>:([0-9]*):([0-9]*): (warning|error): (.*?)(?: \[-W(.*)\])?$/)
       if (!parsed) {
         debug('line not parsed:', line)
         return
@@ -31,6 +31,7 @@ class GccAnalyzer extends Analyzer {
         line: parsed[1],
         col: parsed[2],
         type: '',
+        flag: parsed[5],
         category: parsed[3],
         message: parsed[4]
       })

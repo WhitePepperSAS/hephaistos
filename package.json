@@ -4,6 +4,7 @@
   "description": "Input: .c file, Output: analysis",
   "main": "hephaistos.js",
   "scripts": {
+    "start": "node hephaistos.js",
     "test": "mocha --recursive test/"
   },
   "author": "Louis Cherel",

@@ -1,13 +1,14 @@
 /**
  * @typedef AnalyzeReport
- * @prop {Number} [line]
- * @prop {Number} [col]
- * @prop {String} [content]
- * @prop {String} type
- * @prop {String} category
- * @prop {String} message
- * @prop {Number} cwe
- * @prop {String} source
+ * @prop {Number} [line] - line
+ * @prop {Number} [col] - column
+ * @prop {String} [content] - content of the line
+ * @prop {String} type - the rule which is broken
+ * @prop {String} category - (style|warning|error)
+ * @prop {String} message - info to the user
+ * @prop {Number} cwe - Common Weaknesses and Exposures
+ * @prop {String} flag - flag de warning
+ * @prop {String} source - name of the analyzer
  */
 
 class Analyzer {
