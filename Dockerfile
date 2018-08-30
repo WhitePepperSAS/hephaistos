@@ -1,8 +1,6 @@
-FROM node:slim
+FROM node:stretch
 
 WORKDIR /app
-
-ADD . /app
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -11,20 +9,42 @@ RUN apt-get update && \
     cppcheck \
     clang \
     vera++ \
-    vim
-
-RUN ln -s /app/options/vera.rules /usr/lib/vera++/profiles/platypus.rules
+    vim \
+    python3 \
+    python3-pip \
+    firejail
 
 RUN adduser --disabled-password --gecos "" defaultuser
+# RUN adduser --disabled-password --gecos "" pythonuser
 
-RUN chown defaultuser:defaultuser -R /app
+RUN usermod -a -G defaultuser root
+
+RUN chown root:defaultuser -R /app
+# 740 = RWX R-- ---
+RUN chmod 770 -R /app
+# 666 = RW- RW- RW-
+RUN chmod 666 -R /tmp
+# RUN mkdir /home/defaultuser/python
+# 660 = RW- RW- ---
+# RUN chown defaultuser:defaultuser -R /home/defaultuser/python
+# RUN chmod 770 -R /home/defaultuser/python
+RUN umask 027
+
+RUN pip3 install pytest pytest-timeout
+
+ADD . /app
+
+RUN ln -s /app/options/vera.rules /usr/lib/vera++/profiles/platypus.rules
+# RUN cp /app/python/python3.profile /etc/firejail/
+# RUN rm /app/python/python3.profile
 
 USER defaultuser
-
 RUN npm install --production
 
 ENV DEBUG=hephaistos:*
 ENV PORT=8080
+# ENV HEPH_PYTHON_FILES=python
+# ENV HEPH_PYTHON_TIMEOUT=5s
 
 EXPOSE 8080
 ENTRYPOINT ["node", "./hephaistos.js"]
