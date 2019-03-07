@@ -8,6 +8,7 @@ class GccAnalyzer extends Analyzer {
    * @returns {AnalyzeReport[]}
    */
   static async analyze (filecontent) {
+    debug('analyze', filecontent.length)
     const child = spawn('/usr/bin/gcc', [
       '-Wall',
       '-x',

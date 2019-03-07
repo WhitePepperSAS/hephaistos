@@ -8,6 +8,7 @@ class ClangAnalyzer extends Analyzer {
    * @returns {AnalyzeReport[]}
    */
   static async analyze (filecontent) {
+    debug('analyze', filecontent.length)
     const child = spawn('/usr/bin/clang', [
       '-Wall',
       '-x',
@@ -16,6 +17,7 @@ class ClangAnalyzer extends Analyzer {
     ])
 
     const output = await this.getOutput(child, filecontent, 'stderr')
+    debug('gotten output', output)
     const reports = []
 
     const lines = output.split('\n').map(input => input.replace('\r', ''))

@@ -11,6 +11,7 @@ class VeraAnalyzer extends Analyzer {
    * @returns {AnalyzeReport[]}
    */
   static async analyze (filecontent) {
+    debug('analyze', filecontent.length)
     const child = spawn('/usr/bin/vera++', [
       '-p',
       'platypus.rules',

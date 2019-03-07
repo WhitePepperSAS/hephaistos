@@ -2,7 +2,7 @@
 #define UNITY_CONFIG_H
 #include <stdio.h>
 
-const char __TEST_FILE_PATH[] = "output_test.txt";
+// const char __TEST_FILE_PATH[] = "output_test.txt";
 #define UNITY_OUTPUT_CHAR(a)                  __print_to_file(a)
 #define UNITY_OUTPUT_CHAR_HEADER_DECLARATION  __print_to_file(int)
 #define UNITY_OUTPUT_FLUSH()                  __flush_file()

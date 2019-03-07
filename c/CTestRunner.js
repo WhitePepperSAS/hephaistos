@@ -25,7 +25,7 @@ class CTestRunner {
    *  - les accès fichier
    *  - whitelist des seuls fichiers auxquels l'utilisateur doit pouvoir accéder
    *  - l'option --force permet de lancer firejail malgré le fait qu'on soit dans un docker
-   * 
+   *
    * Pour que le code soit bien testé, il faut:
    * - vérifier que le code compile déjà de base
    *   > Il faut donc utiliser des contraintes de compilation, qui doivent être passées en paramètres pour être flexible
@@ -41,23 +41,27 @@ class CTestRunner {
   static async test (content, testcontent, timeout = '5s') {
     const nbr = randomId()
     const rbinary = `${nbr}.bin`
-    const rtestfile = `${nbr}test.c`
-    const rresultfile = `${nbr}output.txt`
+    const rtestfile = `${nbr}_test.c`
+    const rresultfile = `${nbr}_output.txt`
 
     const binaryfile = path.join(process.env.HOME, rbinary)
     const testfile = path.join(process.env.HOME, rtestfile)
     const resultfile = path.join(process.env.HOME, rresultfile)
     const unityC = path.join(process.env.HOME, 'unity.c')
-/*     const unityH = path.join(process.env.HOME, 'unity.h')
+    /* inutiles car déjà dans le dossier HOME et déjà lus par gcc, pas d'écriture
+    const unityH = path.join(process.env.HOME, 'unity.h')
     const unityInternalsH = path.join(process.env.HOME, 'unity_internals.h')
-    const unityConfigH = path.join(process.env.HOME, 'unity_config.h') */
+    const unityConfigH = path.join(process.env.HOME, 'unity_config.h')
+    */
 
     // on ajoute le contenu du test à la fin du fichier étudiant,
     // après avoir désactivé la fonction main
     content = content
-        .replace(/[ \t\n]main[^a-z]*\(/i, 'disabled_main')
-        // si on a besoin de faire référence au fichier lui-même (peu probable)
-        .replace(/moduletotest/g, nbr)
+      .replace(/[ \t\n]main[^a-zA-Z]*\(/i, 'disabled_main(')
+      // si on a besoin de faire référence au fichier lui-même (peu probable)
+      .replace(/moduletotest/g, nbr)
+
+    testcontent = `const char __TEST_FILE_PATH[] = "${rresultfile}";\n${testcontent}`
 
     content += `\n${testcontent}`
 
@@ -82,10 +86,10 @@ class CTestRunner {
         '--force',
         `--profile=/app/c/c.profile`,
 
-        `--whitelist=~/${binaryfile}`,
+        `--whitelist=~/${rbinary}`,
         `--whitelist=~/${rresultfile}`,
 
-        `--read-only=~/${binaryfile}`,
+        `--read-only=~/${rbinary}`,
         `--read-write=~/${rresultfile}`,
 
         `${binaryfile}`
@@ -101,23 +105,46 @@ class CTestRunner {
         debug(`can't run the program because compilation failed (code=${cOutput.exitCode}).`)
         return {
           result: '',
-          stdout: this.replaceLabel(stdout, nbr),
-          stderr: this.replaceLabel(stderr, nbr)
+          stdout: this.replaceLabel(cOutput.stdout, nbr),
+          stderr: this.replaceLabel(cOutput.stderr, nbr)
         }
       }
 
       const run = spawn('/usr/bin/timeout', params, { cwd: process.env.HOME })
 
-      let {stdout, stderr} = await this.getOutput(run)
+      let { stdout, stderr } = await this.getOutput(run)
       debug('run.stdout: ', stdout)
       debug('run.stderr: ', stderr)
 
-      let result = await readFile(resultfile, 'utf8')
-      
+      const result = (await readFile(resultfile, 'utf8')).split('\n')
+      debug('result', result)
+
+      const parsedResult = []
+
       // maintenant il n'y a plus qu'à parser le résultat
+      const resultFormat = new RegExp(`^${testfile}:([0-9]+):([^:]+):(PASS|FAIL)(?:: (.*))$`, 'i')
+
+      for (let i = 0; i < result.length; i++) {
+        const format = result[i].match(resultFormat)
+        debug('format', format, result[i])
+        if (format) {
+          const [fullResult, line, testFunction, success, message] = format
+          parsedResult.push({
+            source: 'Unity',
+            file: rtestfile.replace(testfile, 'tests.c'),
+            line: parseInt(line),
+            test: testFunction,
+            success: success === 'PASS',
+            message,
+            result: fullResult.replace(testfile, 'tests.c')
+          })
+        }
+      }
+
+      debug(parsedResult)
 
       return {
-        result: '',
+        result: parsedResult,
         stdout: this.replaceLabel(stdout, nbr),
         stderr: this.replaceLabel(stderr, nbr)
       }
@@ -147,22 +174,28 @@ class CTestRunner {
   static async getOutput (child) {
     const bufsout = []
     const bufserr = []
-    let exitcode
+    let exitCode
     child.stdout.on('data', data => bufsout.push(data))
     child.stderr.on('data', data => bufserr.push(data))
 
     child.stdin.on('error', err => debug(err))
-    child.on('exit', code => (exitcode = code))
 
-    await new Promise(resolve => child.stdout.on('end', resolve))
+    await Promise.all([
+      new Promise(resolve => child.stdout.on('end', resolve)),
+      new Promise(resolve => child.on('exit', code => {
+        exitCode = code
+        debug('exit with code', code)
+        resolve()
+      }))
+    ])
 
-    let dataout = Buffer.concat(bufsout).toString('utf8')
-    let dataerr = Buffer.concat(bufserr).toString('utf8')
+    let stdout = Buffer.concat(bufsout).toString('utf8')
+    let stderr = Buffer.concat(bufserr).toString('utf8')
 
-    dataout = dataout.replace(/\x04[\n]?/, '') // eslint-disable-line no-control-regex
-    dataerr = dataerr.replace(/\x04[\n]?/, '') // eslint-disable-line no-control-regex
+    stdout = stdout.replace(/\x04[\n]?/, '') // eslint-disable-line no-control-regex
+    stderr = stderr.replace(/\x04[\n]?/, '') // eslint-disable-line no-control-regex
 
-    return {stdout: dataout, stderr: dataerr, exitCode: exitcode}
+    return { stdout, stderr, exitCode }
   }
 }
 
