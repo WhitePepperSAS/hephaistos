@@ -13,8 +13,10 @@ class CppcheckAnalyzer extends Analyzer {
    * @returns {AnalyzeReport[]}
    */
   static async analyze (filecontent) {
-    const filepath = `/tmp/${randomObjectId()}`
+    debug('analyze', filecontent.length)
+    const filepath = `${process.env.HOME}/cppcheck/${randomObjectId()}`
     await writeFile(filepath, filecontent)
+    debug('file', filepath, 'written')
 
     const child = spawn('/usr/bin/cppcheck', [
       '--enable=all',
@@ -33,7 +35,7 @@ class CppcheckAnalyzer extends Analyzer {
 
   static async parseOutput (output) {
     const reports = []
-    const {results: {errors: [{error}]}} = await xmlParseString(output)
+    const { results: { errors: [{ error }] } } = await xmlParseString(output)
     if (error) {
       error.forEach(err => {
         reports.push({

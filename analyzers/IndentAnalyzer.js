@@ -7,6 +7,7 @@ class IndentAnalyzer extends Analyzer {
    * @returns {AnalyzeReport[]}
    */
   static async analyze (filecontent) {
+    debug('analyze', filecontent.length)
     /** @type {AnalyzeReport[]} **/
     const reports = []
 
