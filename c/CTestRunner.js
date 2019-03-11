@@ -104,7 +104,7 @@ class CTestRunner {
       if (cOutput.exitCode !== 0) {
         debug(`can't run the program because compilation failed (code=${cOutput.exitCode}).`)
         return {
-          result: '',
+          result: null,
           stdout: this.replaceLabel(cOutput.stdout, nbr),
           stderr: this.replaceLabel(cOutput.stderr, nbr)
         }
@@ -122,7 +122,7 @@ class CTestRunner {
       const parsedResult = []
 
       // maintenant il n'y a plus qu'à parser le résultat
-      const resultFormat = new RegExp(`^${testfile}:([0-9]+):([^:]+):(PASS|FAIL)(?:: (.*))$`, 'i')
+      const resultFormat = new RegExp(`^${testfile}:([0-9]+):([^:]+):(PASS|FAIL)(?:: (.*))?$`, 'i')
 
       for (let i = 0; i < result.length; i++) {
         const format = result[i].match(resultFormat)
