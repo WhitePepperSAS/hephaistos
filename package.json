@@ -1,6 +1,6 @@
 {
   "name": "hephaistos",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "Input: .c file, Output: analysis",
   "main": "hephaistos.js",
   "scripts": {
