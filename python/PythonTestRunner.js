@@ -62,6 +62,8 @@ class PythonTestRunner {
         '--force',
         `--profile=/app/python/python3.profile`,
 
+        `--read-only=~/`,
+
         `--whitelist=~/${rfile}`,
         `--whitelist=~/${rtestfile}`,
         `--whitelist=~/${rresultfile}`,
