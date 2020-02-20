@@ -6,7 +6,7 @@ const readFile = promisify(fs.readFile)
 const unlink = promisify(fs.unlink)
 const path = require('path')
 const { spawn } = require('child_process')
-const parser = new (require('xml2js')).Parser({attrkey: '__'})
+const parser = new (require('xml2js')).Parser({ attrkey: '__' })
 const xmlParseString = promisify(parser.parseString)
 
 function randomId () {
@@ -17,6 +17,67 @@ function randomId () {
   */
 
   return 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'.replace(/[x]/g, () => String.fromCharCode(97 + Math.random() * 26))
+}
+
+/**
+ * @typedef {TestResult}
+ * @prop {String} file
+ * @prop {Number} line
+ * @prop {String} name
+ * @prop {Number} time
+ * @prop {Object} failure
+ * @prop {String} failure.stacktrace
+ * @prop {String} failure.message
+ */
+
+/**
+ * @typedef {Testsuite}
+ * @prop {Object} stats
+ * @prop {Number} stats.errors
+ * @prop {Number} stats.failures
+ * @prop {Number} stats.skipped
+ * @prop {Number} stats.tests
+ * @prop {Number} stats.time
+ * @prop {String} stats.timestamp
+ * @prop {TestResult[]} tests
+ */
+
+/**
+ * simplifies and clarifies the output json from the xml extract
+ * @returns {Testsuite}
+ */
+function normalize (xml) {
+  if (!xml.testsuites || !xml.testsuites.testsuite.length) return {}
+  const testsuite = xml.testsuites.testsuite[0]
+  const stats = testsuite.__
+  const out = {
+    stats: {
+      errors: parseInt(stats.errors),
+      failures: parseInt(stats.failures),
+      skipped: parseInt(stats.skipped),
+      tests: parseInt(stats.tests),
+      time: parseFloat(stats.time),
+      timestamp: stats.timestamp
+    },
+    tests: testsuite.testcase.map(t => {
+      let failure
+      if (t.failure && t.failure.length) {
+        failure = {
+          stacktrace: t.failure[0]._,
+          message: t.failure[0].__.message
+        }
+      }
+      return {
+        file: t.__.file,
+        line: parseInt(t.__.line),
+        name: t.__.name,
+        time: parseFloat(t.__.time),
+        failure: failure
+      }
+    })
+  }
+
+  return out
 }
 
 class PythonTestRunner {
@@ -60,9 +121,9 @@ class PythonTestRunner {
         timeout,
         '/usr/bin/firejail',
         '--force',
-        `--profile=/app/langs/python/python3.profile`,
+        '--profile=/app/langs/python/python3.profile',
 
-        // `--read-only=~/`,
+        '--read-only=~/',
 
         `--whitelist=~/${rfile}`,
         `--whitelist=~/${rtestfile}`,
@@ -75,6 +136,7 @@ class PythonTestRunner {
         '/usr/bin/python3',
         '-m',
         'pytest',
+        '-p', 'no:cacheprovider', // don't write bytecode, to avoid unnecessary warnings
         '--junitxml',
         rresultfile,
         rtestfile
@@ -83,20 +145,23 @@ class PythonTestRunner {
 
       const child = spawn('/usr/bin/timeout', params, { cwd: process.env.HOME })
 
-      let {stdout, stderr} = await this.getOutput(child)
+      const { stdout, stderr } = await this.getOutput(child)
       debug('stdout: ', stdout)
       debug('stderr: ', stderr)
 
       // TODO: trouver un moyen de conserver le fichier result.xml après le passage de la sandbox
-      let result = await readFile(resultfile, 'utf8')
+      // 20/02/2020: je ne sais pas si ce TODO est toujours utile
+      const result = await readFile(resultfile, 'utf8')
+      const parsedXml = await xmlParseString(this.replaceLabel(result, nbr))
+      const norm = normalize(parsedXml)
+
+      debug('result', JSON.stringify(norm, null, 2))
 
       return {
-        result: await xmlParseString(this.replaceLabel(result, nbr)),
+        result: norm,
         stdout: this.replaceLabel(stdout, nbr),
         stderr: this.replaceLabel(stderr, nbr)
       }
-    } catch (err) {
-      throw err
     } finally {
       await Promise.all([
         unlink(file),
@@ -135,7 +200,7 @@ class PythonTestRunner {
     dataout = dataout.replace(/\x04[\n]?/, '') // eslint-disable-line no-control-regex
     dataerr = dataerr.replace(/\x04[\n]?/, '') // eslint-disable-line no-control-regex
 
-    return {stdout: dataout, stderr: dataerr}
+    return { stdout: dataout, stderr: dataerr }
   }
 }
 
