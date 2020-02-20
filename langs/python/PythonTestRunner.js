@@ -60,9 +60,9 @@ class PythonTestRunner {
         timeout,
         '/usr/bin/firejail',
         '--force',
-        `--profile=/app/python/python3.profile`,
+        `--profile=/app/langs/python/python3.profile`,
 
-        `--read-only=~/`,
+        // `--read-only=~/`,
 
         `--whitelist=~/${rfile}`,
         `--whitelist=~/${rtestfile}`,

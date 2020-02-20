@@ -35,8 +35,8 @@ RUN pip3 install pytest pytest-timeout
 
 ADD . /app
 
-RUN ln -s /app/options/vera.rules /usr/lib/vera++/profiles/platypus.rules
-RUN cp /app/c/unity.c /app/c/unity.h /app/c/unity_config.h /app/c/unity_internals.h /home/defaultuser
+RUN ln -s /app/langs/c/options/vera.rules /usr/lib/vera++/profiles/platypus.rules
+RUN cp /app/langs/c/unity.c /app/langs/c/unity.h /app/langs/c/unity_config.h /app/langs/c/unity_internals.h /home/defaultuser
 RUN mkdir -p /home/defaultuser/cppcheck/
 RUN chmod 636 -R /home/defaultuser/cppcheck/
 RUN chown root:defaultuser -R /home/defaultuser/cppcheck

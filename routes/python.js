@@ -1,7 +1,7 @@
 const router = require('express').Router()
 const debug = require('debug')('hephaistos:python-router') // eslint-disable-line no-unused-vars
 
-const PythonTestRunner = require('../python/PythonTestRunner.js')
+const PythonTestRunner = require('../langs/python/PythonTestRunner.js')
 
 router.post('/test', async ({body: {content, test, timeout = '5s'}}, res, next) => {
   try {

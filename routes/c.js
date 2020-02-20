@@ -1,13 +1,13 @@
 const router = require('express').Router()
 const debug = require('debug')('hephaistos:c-route') // eslint-disable-line no-unused-vars
-const CTestRunner = require('../c/CTestRunner.js')
+const CTestRunner = require('../langs/c/CTestRunner.js')
 const analyzers = [
-  require('../analyzers/IndentAnalyzer.js'),
-  require('../analyzers/AStyleAnalyzer.js'),
-  require('../analyzers/CppcheckAnalyzer.js'),
-  require('../analyzers/GccAnalyzer.js'),
-  require('../analyzers/ClangAnalyzer.js'),
-  require('../analyzers/VeraAnalyzer.js')
+  require('../langs/c/analyzers/IndentAnalyzer.js'),
+  require('../langs/c/analyzers/AStyleAnalyzer.js'),
+  require('../langs/c/analyzers/CppcheckAnalyzer.js'),
+  require('../langs/c/analyzers/GccAnalyzer.js'),
+  require('../langs/c/analyzers/ClangAnalyzer.js'),
+  require('../langs/c/analyzers/VeraAnalyzer.js')
 ]
 
 router.post('/analyze', async ({ body: { content } }, res, next) => {
