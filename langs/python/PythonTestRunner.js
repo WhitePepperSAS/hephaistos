@@ -20,7 +20,7 @@ function randomId () {
 }
 
 /**
- * @typedef {TestResult}
+ * @typedef {Object} TestResult
  * @prop {String} file
  * @prop {Number} line
  * @prop {String} name
@@ -31,7 +31,7 @@ function randomId () {
  */
 
 /**
- * @typedef {Testsuite}
+ * @typedef {Object} TestSuite
  * @prop {Object} stats
  * @prop {Number} stats.errors
  * @prop {Number} stats.failures
@@ -44,13 +44,14 @@ function randomId () {
 
 /**
  * simplifies and clarifies the output json from the xml extract
- * @returns {Testsuite}
+ * @returns {TestSuite}
  */
 function normalize (xml) {
   if (!xml.testsuites || !xml.testsuites.testsuite.length) return {}
   const testsuite = xml.testsuites.testsuite[0]
   const stats = testsuite.__
-  const out = {
+
+  return {
     stats: {
       errors: parseInt(stats.errors),
       failures: parseInt(stats.failures),
@@ -65,6 +66,9 @@ function normalize (xml) {
         failure = {
           stacktrace: t.failure[0]._,
           message: t.failure[0].__.message
+            .replace(/AssertionError: /g, '')
+            .replace(/assert.*/, '')
+            .replace(/([^\n\r\t ])[\n\r\t ]*$/, '$1')
         }
       }
       return {
@@ -76,8 +80,6 @@ function normalize (xml) {
       }
     })
   }
-
-  return out
 }
 
 class PythonTestRunner {
@@ -160,7 +162,7 @@ class PythonTestRunner {
       return {
         result: norm,
         stdout: this.replaceLabel(stdout, nbr),
-        stderr: this.replaceLabel(stderr, nbr)
+        stderr: this.replaceLabel(stderr, nbr).replace('\\n', '\n')
       }
     } finally {
       await Promise.all([
