@@ -43,6 +43,13 @@ function randomId () {
  */
 
 /**
+ * @typedef {Object} APIResult
+ * @prop {String} stdout
+ * @prop {String} stderr
+ * @prop {TestSuite} result
+ */
+
+/**
  * simplifies and clarifies the output json from the xml extract
  * @returns {TestSuite}
  */
