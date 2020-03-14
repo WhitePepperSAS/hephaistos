@@ -13,7 +13,7 @@ const analyzers = [
 router.post('/analyze', async ({ body: { content } }, res, next) => {
   try {
     content = Buffer.from(content, 'base64').toString()
-    debug(`content:\n`, content)
+    debug('content:\n', content)
 
     const reports = await processFile(content)
     res.json(reports)
@@ -27,8 +27,8 @@ router.post('/test', async ({ body: { content, test, timeout = '5s' } }, res, ne
   try {
     content = Buffer.from(content, 'base64').toString()
     test = Buffer.from(test, 'base64').toString()
-    debug(`content:\n`, content)
-    debug(`test:\n`, test)
+    debug('content:\n', content)
+    debug('test:\n', test)
 
     const output = await CTestRunner.test(content, test, timeout)
 

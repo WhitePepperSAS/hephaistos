@@ -12,6 +12,7 @@ RUN apt-get update && \
     vim \
     python3 \
     python3-pip \
+    ruby \
     firejail
 
 RUN adduser --disabled-password --gecos "" defaultuser
@@ -37,11 +38,10 @@ ADD . /app
 
 RUN ln -s /app/langs/c/options/vera.rules /usr/lib/vera++/profiles/platypus.rules
 RUN cp /app/langs/c/unity.c /app/langs/c/unity.h /app/langs/c/unity_config.h /app/langs/c/unity_internals.h /home/defaultuser
+RUN cp /app/langs/c/stylize_as_junit.rb /home/defaultuser
 RUN mkdir -p /home/defaultuser/cppcheck/
 RUN chmod 636 -R /home/defaultuser/cppcheck/
 RUN chown root:defaultuser -R /home/defaultuser/cppcheck
-# RUN cp /app/python/python3.profile /etc/firejail/
-# RUN rm /app/python/python3.profile
 
 USER defaultuser
 RUN npm install --production

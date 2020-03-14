@@ -1,4 +1,4 @@
-const debug = require('debug')('hephaistos:c-test-runner')
+const debug = require('debug')('hephaistos:CTestRunner')
 const { promisify } = require('util')
 const fs = require('fs')
 const writeFile = promisify(fs.writeFile)
@@ -6,12 +6,8 @@ const readFile = promisify(fs.readFile)
 const unlink = promisify(fs.unlink)
 const path = require('path')
 const { spawn } = require('child_process')
-/* const parser = new (require('xml2js')).Parser({attrkey: '__'})
-const xmlParseString = promisify(parser.parseString) */
-
-function randomId () {
-  return 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'.replace(/[x]/g, () => String.fromCharCode(97 + Math.random() * 26))
-}
+const XMLFileToJson = require('../../utils/junitParser.js')
+const randomId = require('../../utils/randomId.js')
 
 class CTestRunner {
   /**
@@ -40,13 +36,16 @@ class CTestRunner {
    */
   static async test (content, testcontent, timeout = '5s') {
     const nbr = randomId()
+    // r is for relative path
     const rbinary = `${nbr}.bin`
     const rtestfile = `${nbr}_test.c`
-    const rresultfile = `${nbr}_output.txt`
+    const rresultfile = `${nbr}.testresults`
+    const rjunitfile = `${nbr}_results.xml`
 
     const binaryfile = path.join(process.env.HOME, rbinary)
     const testfile = path.join(process.env.HOME, rtestfile)
     const resultfile = path.join(process.env.HOME, rresultfile)
+    const junitfile = path.join(process.env.HOME, rjunitfile)
     const unityC = path.join(process.env.HOME, 'unity.c')
     /* inutiles car déjà dans le dossier HOME et déjà lus par gcc, pas d'écriture
     const unityH = path.join(process.env.HOME, 'unity.h')
@@ -56,6 +55,7 @@ class CTestRunner {
 
     // on ajoute le contenu du test à la fin du fichier étudiant,
     // après avoir désactivé la fonction main
+    // FIXME: on va virer ça à terme
     content = content
       .replace(/[ \t\n]main[^a-zA-Z]*\(/i, 'disabled_main(')
       // si on a besoin de faire référence au fichier lui-même (peu probable)
@@ -65,6 +65,8 @@ class CTestRunner {
 
     content += `\n${testcontent}`
 
+    let compilationFailed = true
+
     try {
       await Promise.all([
         writeFile(testfile, content),
@@ -73,10 +75,10 @@ class CTestRunner {
 
       const compileParams = [
         timeout,
-        `gcc`,
+        'gcc',
         unityC,
         testfile,
-        `-o`,
+        '-o',
         binaryfile
       ]
 
@@ -84,7 +86,9 @@ class CTestRunner {
         timeout,
         '/usr/bin/firejail',
         '--force',
-        `--profile=/app/c/c.profile`,
+        '--profile=/app/langs/c/c.profile',
+
+        '--read-only=~/',
 
         `--whitelist=~/${rbinary}`,
         `--whitelist=~/${rresultfile}`,
@@ -97,7 +101,7 @@ class CTestRunner {
       debug('params', params)
 
       const compile = spawn('/usr/bin/timeout', compileParams, { cwd: process.env.HOME })
-      let cOutput = await this.getOutput(compile)
+      const cOutput = await this.getOutput(compile, "compilation")
       debug('cOutput.stdout: ', cOutput.stdout)
       debug('cOutput.stderr: ', cOutput.stderr)
 
@@ -109,51 +113,52 @@ class CTestRunner {
           stderr: this.replaceLabel(cOutput.stderr, nbr)
         }
       }
+      compilationFailed = false
 
       const run = spawn('/usr/bin/timeout', params, { cwd: process.env.HOME })
 
-      let { stdout, stderr } = await this.getOutput(run)
+      const { stdout, stderr, exitCode } = await this.getOutput(run, "run")
       debug('run.stdout: ', stdout)
       debug('run.stderr: ', stderr)
 
-      const result = (await readFile(resultfile, 'utf8')).split('\n')
-      debug('result', result)
+      if (exitCode !== 0) {
+        const result = await readFile(resultfile, 'utf8')
+        debug('result file', result)
+      }
 
-      const parsedResult = []
+      const rubyParams = [
+        path.join(process.env.HOME, 'stylize_as_junit.rb'),
+        '-r', process.env.HOME,
+        '-o', rjunitfile
+      ]
 
-      // maintenant il n'y a plus qu'à parser le résultat
-      const resultFormat = new RegExp(`^${testfile}:([0-9]+):([^:]+):(PASS|FAIL)(?:: (.*))?$`, 'i')
+      const runj = spawn('/usr/bin/ruby', rubyParams, { cwd: process.env.HOME })
+      await this.getOutput(runj, "junit conversion")
 
-      for (let i = 0; i < result.length; i++) {
-        const format = result[i].match(resultFormat)
-        debug('format', format, result[i])
-        if (format) {
-          const [fullResult, line, testFunction, success, message] = format
-          parsedResult.push({
-            source: 'Unity',
-            file: rtestfile.replace(testfile, 'tests.c'),
-            line: parseInt(line),
-            test: testFunction,
-            success: success === 'PASS',
-            message,
-            result: fullResult.replace(testfile, 'tests.c')
-          })
+      const result = await readFile(junitfile, 'utf8')
+      try {
+        const norm = await XMLFileToJson(this.replaceLabel(result, nbr))
+
+        debug('result', JSON.stringify(norm, null, 2))
+
+        return {
+          result: norm,
+          stdout: this.replaceLabel(stdout, nbr),
+          stderr: this.replaceLabel(stderr, nbr)
+        }
+      } catch (err) {
+        return {
+          result: null,
+          stdout: this.replaceLabel(stdout, nbr),
+          stderr: this.replaceLabel(stderr, nbr)
         }
       }
-
-      debug(parsedResult)
-
-      return {
-        result: parsedResult,
-        stdout: this.replaceLabel(stdout, nbr),
-        stderr: this.replaceLabel(stderr, nbr)
-      }
-    } catch (err) {
-      throw err
     } finally {
       await Promise.all([
         unlink(testfile),
-        unlink(resultfile)
+        compilationFailed || unlink(binaryfile),
+        compilationFailed || unlink(resultfile),
+        compilationFailed || unlink(junitfile)
       ])
     }
   }
@@ -170,8 +175,9 @@ class CTestRunner {
   /**
    * Tranforms the streams to exploitable string
    * @param {child_process} child
+   * @param {String} name
    */
-  static async getOutput (child) {
+  static async getOutput (child, name) {
     const bufsout = []
     const bufserr = []
     let exitCode
@@ -184,7 +190,7 @@ class CTestRunner {
       new Promise(resolve => child.stdout.on('end', resolve)),
       new Promise(resolve => child.on('exit', code => {
         exitCode = code
-        debug('exit with code', code)
+        debug(name, 'exit with code', code)
         resolve()
       }))
     ])
