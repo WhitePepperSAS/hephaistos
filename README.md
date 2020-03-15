@@ -2,15 +2,15 @@
 
 install:
 ```bash
-docker -t hephaistos .
+make build
 ```
 
 run:
 ```bash
-docker run --rm  --name hephaistos -p '5000:8080' hephaistos
+make start
 ```
 
 stop:
 ```bash
-docker stop $(docker ps | grep hephaistos | cut -d' ' -f1)
+make stop
 ```
