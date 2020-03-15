@@ -123,7 +123,7 @@ class CTestRunner {
 
       if (exitCode !== 0) {
         const result = await readFile(resultfile, 'utf8')
-        debug('result file', result)
+        debug('result file\n', result)
       }
 
       const rubyParams = [
@@ -133,7 +133,7 @@ class CTestRunner {
       ]
 
       const runj = spawn('/usr/bin/ruby', rubyParams, { cwd: process.env.HOME })
-      await this.getOutput(runj, "junit conversion")
+      const junitOutput = await this.getOutput(runj, "junit conversion")
 
       const result = await readFile(junitfile, 'utf8')
       try {
@@ -147,6 +147,8 @@ class CTestRunner {
           stderr: this.replaceLabel(stderr, nbr)
         }
       } catch (err) {
+        debug('junit output error', junitOutput.stderr)
+        debug('junit output', junitOutput.stdout)
         return {
           result: null,
           stdout: this.replaceLabel(stdout, nbr),
