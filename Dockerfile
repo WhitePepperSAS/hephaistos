@@ -1,26 +1,16 @@
-FROM node:stretch
-
+FROM node:buster-slim
 WORKDIR /app
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-    gcc build-essential \
-    astyle \
-    cppcheck \
-    clang \
-    vera++ \
-    vim \
-    python3 \
-    python3-pip \
-    ruby \
-    firejail
-
-RUN adduser --disabled-password --gecos "" defaultuser
-# RUN adduser --disabled-password --gecos "" pythonuser
-
-RUN usermod -a -G defaultuser root
-
-RUN chown root:defaultuser -R /app
+      gcc build-essential astyle cppcheck clang vera++ \
+      vim \
+      python3 python3-pip \
+      ruby \
+      firejail && \
+    adduser --disabled-password --gecos "" defaultuser && \
+    usermod -a -G defaultuser root && \
+    chown root:defaultuser -R /app
 # 740 = RWX R-- ---
 RUN chmod 770 -R /app
 # 666 = RW- RW- RW-
@@ -36,12 +26,16 @@ RUN pip3 install pytest pytest-timeout
 
 ADD . /app
 
-RUN ln -s /app/langs/c/options/vera.rules /usr/lib/vera++/profiles/platypus.rules
-RUN cp /app/langs/c/unity.c /app/langs/c/unity.h /app/langs/c/unity_config.h /app/langs/c/unity_internals.h /home/defaultuser
-RUN cp /app/langs/c/stylize_as_junit.rb /home/defaultuser
-RUN mkdir -p /home/defaultuser/cppcheck/
-RUN chmod 636 -R /home/defaultuser/cppcheck/
-RUN chown root:defaultuser -R /home/defaultuser/cppcheck
+RUN ln -s /app/langs/c/options/vera.rules /usr/lib/vera++/profiles/platypus.rules && \
+    cp /app/langs/c/unity.c \
+       /app/langs/c/unity.h \
+       /app/langs/c/unity_config.h \
+       /app/langs/c/unity_internals.h \
+       /home/defaultuser && \
+    cp /app/langs/c/stylize_as_junit.rb /home/defaultuser && \
+    mkdir -p /home/defaultuser/cppcheck/ && \
+    chmod 636 -R /home/defaultuser/cppcheck/ && \
+    chown root:defaultuser -R /home/defaultuser/cppcheck
 
 USER defaultuser
 RUN npm install --production
