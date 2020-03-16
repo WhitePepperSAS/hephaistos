@@ -13,9 +13,11 @@ app.use(cookieParser())
 
 const cRoute = require('./routes/c.js')
 const pythonRoute = require('./routes/python.js')
+const javascriptRoute = require('./routes/javascript.js')
 
 app.use('/c', cRoute)
 app.use('/python', pythonRoute)
+app.use('/javascript', javascriptRoute)
 
 app.use((err, req, res, next) => {
   debug('error', err)

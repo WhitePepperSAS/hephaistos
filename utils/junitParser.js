@@ -38,19 +38,38 @@ const xmlParseString = promisify(parser.parseString)
  */
 function normalize (xml) {
   if (!xml.testsuites || !xml.testsuites.testsuite.length) return {}
-  const testsuite = xml.testsuites.testsuite[0]
-  const stats = testsuite.__
+  const testcases = []
+  let stats
+  let newStats
+  for (let i = 0; i < xml.testsuites.testsuite.length; i++) {
+    if (xml.testsuites.testsuite[i].__.tests === '0' ||
+      !xml.testsuites.testsuite[i].testcase) {
+      continue
+    }
+    newStats = xml.testsuites.testsuite[i].__
+    if (!stats) {
+      stats = {
+        errors: parseInt(newStats.errors),
+        failures: parseInt(newStats.failures),
+        skipped: parseInt(newStats.skipped),
+        tests: parseInt(newStats.tests),
+        time: parseFloat(newStats.time),
+        timestamp: newStats.timestamp
+      }
+    } else {
+      stats.errors += parseInt(newStats.errors)
+      stats.failures += parseInt(newStats.failures)
+      stats.skipped += parseInt(newStats.skipped)
+      stats.tests += parseInt(newStats.tests)
+    }
+    xml.testsuites.testsuite[i].testcase.forEach(
+      testcase => testcases.push(testcase)
+    )
+  }
 
   return {
-    stats: {
-      errors: parseInt(stats.errors),
-      failures: parseInt(stats.failures),
-      skipped: parseInt(stats.skipped),
-      tests: parseInt(stats.tests),
-      time: parseFloat(stats.time),
-      timestamp: stats.timestamp
-    },
-    tests: testsuite.testcase.map(t => {
+    stats,
+    tests: testcases.map(t => {
       let failure
       if (t.failure && t.failure.length) {
         failure = {

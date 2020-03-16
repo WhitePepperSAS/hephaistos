@@ -31,7 +31,7 @@ RUN chmod 770 -R /app && chmod 633 -R /tmp && umask 027
 # RUN chmod 770 -R /home/defaultuser/python
 
 RUN pip3 install pytest pytest-timeout && \
-    npm install --global mocha sinon sinon-test chai
+    npm install --global mocha mocha-junit-reporter sinon sinon-test chai
 
 ADD . /app
 
