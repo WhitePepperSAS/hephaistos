@@ -3,7 +3,6 @@ const { promisify } = require('util')
 const fs = require('fs')
 const writeFile = promisify(fs.writeFile)
 const readFile = promisify(fs.readFile)
-const readdir = promisify(fs.readdir)
 const mkdir = promisify(fs.mkdir)
 const chmod = promisify(fs.chmod)
 const copyFile = promisify(fs.copyFile)
@@ -15,6 +14,15 @@ const randomId = require('../../utils/randomId.js')
 const rimraf = promisify(require('rimraf'))
 const { HOME } = process.env
 const scriptsFolder = '/scripts'
+const runityC = 'unity.c'
+const runityH = 'unity.h'
+const runityInternalsH = 'unity_internals.h'
+const runityConfigH = 'unity_config.h'
+const unityC = path.join(scriptsFolder, runityC)
+const unityH = path.join(scriptsFolder, runityH)
+const unityInternalsH = path.join(scriptsFolder, runityInternalsH)
+const unityConfigH = path.join(scriptsFolder, runityConfigH)
+const dataFolder = path.join(process.env.HEPHAISTOS_FOLDER, 'data')
 
 class CTestRunner {
   /**
@@ -35,7 +43,6 @@ class CTestRunner {
    *
    * ensuite on lance les tests unitaires avec ./<nom du fichier>.bin
    * enfin récupérer les résultats et les parser
-   *
    */
   static async test (content, testcontent, timeout = '5s') {
     if (!timeout.match(/^[0-9]{1,2}s$/)) {
@@ -51,21 +58,12 @@ class CTestRunner {
     const rresultfile = `${nbr}.testresults`
     const rjunitfile = `${nbr}_results.xml`
 
-    const sourcetestfolder = path.join(process.env.HEPHAISTOS_FOLDER, 'data', nbr)
+    const sourcetestfolder = path.join(dataFolder, nbr)
     const testfolder = path.join(HOME, nbr)
     const binaryfile = path.join(HOME, nbr, rbinaryfile)
     const testfile = path.join(HOME, nbr, rtestfile)
     const resultfile = path.join(HOME, nbr, rresultfile)
     const junitfile = path.join(HOME, nbr, rjunitfile)
-
-    const runityC = 'unity.c'
-    const runityH = 'unity.h'
-    const runityInternalsH = 'unity_internals.h'
-    const runityConfigH = 'unity_config.h'
-    const unityC = path.join(scriptsFolder, runityC)
-    const unityH = path.join(scriptsFolder, runityH)
-    const unityInternalsH = path.join(scriptsFolder, runityInternalsH)
-    const unityConfigH = path.join(scriptsFolder, runityConfigH)
 
     // on ajoute le contenu du test à la fin du fichier étudiant,
     // après avoir désactivé la fonction main
@@ -101,11 +99,8 @@ class CTestRunner {
       // FIXME: we should probably put that into docker too
       const compileParams = [
         timeout,
-        'gcc',
-        runityC,
-        rtestfile,
-        '-o',
-        rbinaryfile
+        'gcc', runityC, rtestfile,
+        '-o', rbinaryfile
       ]
       debug('compileParams', compileParams)
 
@@ -157,8 +152,8 @@ class CTestRunner {
       const runj = spawn('/usr/bin/ruby', rubyParams, { cwd: testfolder })
       const junitOutput = await getOutput(runj, 'junit conversion')
 
-      const result = await readFile(junitfile, 'utf8')
       try {
+        const result = await readFile(junitfile, 'utf8')
         const norm = await XMLFileToJson(this.replaceLabel(result, nbr))
 
         debug('result', JSON.stringify(norm, null, 2))
