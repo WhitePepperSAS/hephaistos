@@ -5,6 +5,7 @@
   "main": "hephaistos.js",
   "scripts": {
     "start": "node hephaistos.js",
+    "postinstall": "mkdir -p $HEPHAISTOS_FOLDER/data",
     "test": "mocha --recursive test/"
   },
   "author": "Louis Cherel",
