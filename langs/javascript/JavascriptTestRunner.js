@@ -31,7 +31,7 @@ class JavascriptTestRunner {
   static async test (content, testcontent, timeout = '5s') {
     if (!timeout.match(/^[0-9]{1,2}s$/)) {
       return {
-        error: "Timeout is not in the right format"
+        error: 'Timeout is not in the right format'
       }
     }
 
