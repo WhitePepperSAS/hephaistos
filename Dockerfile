@@ -58,4 +58,5 @@ ENV PORT=8080
 # ENV HEPH_PYTHON_TIMEOUT=5s
 
 EXPOSE 8080
-ENTRYPOINT ["node", "./hephaistos.js"]
+# ENTRYPOINT ["node", "./hephaistos.js"]
+ENTRYPOINT ["bash", "./test.sh"]
