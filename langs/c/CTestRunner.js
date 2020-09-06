@@ -47,7 +47,7 @@ class CTestRunner {
   static async test (content, testcontent, timeout = '5s') {
     if (!timeout.match(/^[0-9]{1,2}s$/)) {
       return {
-        error: "Timeout is not in the right format"
+        error: 'Timeout is not in the right format'
       }
     }
 
@@ -99,22 +99,33 @@ class CTestRunner {
       // FIXME: we should probably put that into docker too
       const compileParams = [
         timeout,
-        'gcc', runityC, rtestfile,
+        'gcc-9', '-fdiagnostics-format=json', runityC, rtestfile,
         '-o', rbinaryfile
       ]
       debug('compileParams', compileParams)
 
-      const compile = spawn('/usr/bin/timeout', compileParams, { cwd: testfolder })
+      const compile = spawn('/usr/bin/timeout', compileParams, {
+        cwd: testfolder,
+        env: {
+          ...process.env,
+          LC_MESSAGES: 'fr_FR.utf8',
+          LC_ALL: 'fr_FR.utf8',
+          LANG: 'fr_FR.utf8'
+        }
+      })
       const cOutput = await getOutput(compile, 'compilation')
       debug('compilation stdout: ', cOutput.stdout)
       debug('compilation stderr: ', cOutput.stderr)
 
       if (cOutput.exitCode !== 0) {
         debug(`can't run the program because compilation failed (code=${cOutput.exitCode}).`)
+        const err = this.replaceLabel(cOutput.stderr, nbr)
         return {
           result: null,
+          error: 'compilation',
           stdout: this.replaceLabel(cOutput.stdout, nbr),
-          stderr: this.replaceLabel(cOutput.stderr, nbr)
+          stderr: err,
+          compil: JSON.parse(err.slice(2))
         }
       }
 
@@ -137,10 +148,33 @@ class CTestRunner {
       const { stdout, stderr, exitCode } = await getOutput(run, 'run')
       debug('run.stdout: ', stdout)
       debug('run.stderr: ', stderr)
+      debug('run.exitCode: ', exitCode)
 
       if (exitCode !== 0) {
         const result = await readFile(resultfile, 'utf8')
         debug('result file\n', result)
+      }
+
+      if (exitCode === 124) {
+        debug('Timeout')
+        return {
+          result: null,
+          error: 'timeout',
+          stdout: this.replaceLabel(stdout, nbr),
+          stderr: this.replaceLabel(stderr, nbr),
+          compil: null
+        }
+      }
+
+      if (exitCode === 139) {
+        debug('Segmentation fault')
+        return {
+          result: null,
+          error: 'segfault',
+          stdout: this.replaceLabel(stdout, nbr),
+          stderr: this.replaceLabel(stderr, nbr),
+          compil: null
+        }
       }
 
       const rubyParams = [
@@ -161,15 +195,18 @@ class CTestRunner {
         return {
           result: norm,
           stdout: this.replaceLabel(stdout, nbr),
-          stderr: this.replaceLabel(stderr, nbr)
+          stderr: this.replaceLabel(stderr, nbr),
+          compil: null
         }
       } catch (err) {
         debug('junit output error', junitOutput.stderr)
         debug('junit output', junitOutput.stdout)
         return {
           result: null,
+          error: 'junit',
           stdout: this.replaceLabel(stdout, nbr),
-          stderr: this.replaceLabel(stderr, nbr)
+          stderr: this.replaceLabel(stderr, nbr),
+          compil: null
         }
       }
     } finally {

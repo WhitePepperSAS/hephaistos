@@ -1,7 +1,18 @@
 FROM node:buster-slim
 WORKDIR /app
 
+RUN echo 'deb http://deb.debian.org/debian testing main' > /etc/apt/sources.list.d/testing.list
+RUN echo 'Package: *\n\
+Pin: release a=stable\n\
+Pin-Priority: 700\n\
+\n\
+Package: *\n\
+Pin: release a=testing\n\
+Pin-Priority: 650\n\
+' >> /etc/apt/preferences.d/pin
+
 RUN apt-get update && \
+    echo -e "\n*** Install BASE ***\n" && \
     apt-get install -y --no-install-recommends \
       apt-transport-https \
       ca-certificates \
@@ -12,12 +23,15 @@ RUN apt-get update && \
     add-apt-repository \
      "deb [arch=amd64] https://download.docker.com/linux/debian buster stable" && \
     apt-get update && \
+    echo -e "\n*** Install DOCKER ***\n" && \
     apt-get install -y --no-install-recommends \
       docker-ce docker-ce-cli containerd.io \
-      gcc build-essential astyle cppcheck clang vera++ \
+      build-essential astyle cppcheck clang vera++ \
       vim \
       python3 python3-pip \
       ruby && \
+    echo -e "\n*** Install GCC 9 ***\n" && \
+    apt-get install -y -t testing gcc-9 gcc-9-locales && \
     adduser --disabled-password --gecos "" defaultuser && \
     usermod -a -G defaultuser root && \
     usermod -a -G docker defaultuser && \

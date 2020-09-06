@@ -7,7 +7,7 @@
 
 // [[[ EX1 DEFINISSEZ VOTRE FONCTION operation SOUS CE COMMENTAIRE
 
-int* operation(int a, int b) {
+int operation(int a, int b) {
   return a * a + b * 4;
 }
 
