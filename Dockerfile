@@ -61,7 +61,9 @@ RUN ln -s /app/langs/c/options/vera.rules /usr/lib/vera++/profiles/platypus.rule
     cp /app/langs/c/stylize_as_junit.rb /scripts && \
     mkdir -p /scripts/cppcheck/ && \
     chmod 636 -R /scripts/cppcheck/ && \
-    chown root:defaultuser -R /scripts/cppcheck
+    chown root:defaultuser -R /scripts/cppcheck &&
+    mkdir -p /hephaistos/data &&
+    chmod 777 -R /hephaistos
 
 USER defaultuser
 RUN npm install --production
@@ -70,6 +72,7 @@ ENV DEBUG=hephaistos:*
 ENV PORT=8080
 # ENV HEPH_PYTHON_FILES=python
 # ENV HEPH_PYTHON_TIMEOUT=5s
+ENV HEPHAISTOS_FOLDER=/hephaistos
 
 EXPOSE 8080
 ENTRYPOINT ["node", "./hephaistos.js"]
