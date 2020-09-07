@@ -120,12 +120,19 @@ class CTestRunner {
       if (cOutput.exitCode !== 0) {
         debug(`can't run the program because compilation failed (code=${cOutput.exitCode}).`)
         const err = this.replaceLabel(cOutput.stderr, nbr)
+        let parsed = ''
+        try {
+          const treatedOutput = err.split('\n')[1]
+          parsed = JSON.parse(treatedOutput)
+        } catch (err) {
+          parsed = []
+        }
         return {
           result: null,
           error: 'compilation',
           stdout: this.replaceLabel(cOutput.stdout, nbr),
           stderr: err,
-          compil: JSON.parse(err.slice(2))
+          compil: parsed
         }
       }
 
