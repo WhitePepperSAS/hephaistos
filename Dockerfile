@@ -26,7 +26,7 @@ RUN apt-get update && \
     echo -e "\n*** Install DOCKER ***\n" && \
     apt-get install -y --no-install-recommends \
       docker-ce docker-ce-cli containerd.io \
-      build-essential astyle cppcheck clang vera++ \
+      build-essential astyle cppcheck clang vera++ valgrind \
       vim \
       python3 python3-pip \
       ruby && \

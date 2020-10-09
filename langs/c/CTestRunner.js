@@ -9,7 +9,8 @@ const copyFile = promisify(fs.copyFile)
 const getOutput = require('../../utils/getOutput.js')
 const path = require('path')
 const { spawn } = require('child_process')
-const XMLFileToJson = require('../../utils/junitParser.js')
+const JUnitXMLFileToJson = require('../../utils/junitParser.js')
+const ValgrindXMLFileToJson = require('../../utils/valgrindParser.js')
 const randomId = require('../../utils/randomId.js')
 const rimraf = promisify(require('rimraf'))
 const { HOME } = process.env
@@ -57,6 +58,7 @@ class CTestRunner {
     const rtestfile = `${nbr}_test.c`
     const rresultfile = `${nbr}.testresults`
     const rjunitfile = `${nbr}_results.xml`
+    const rvalgrindfile = `${nbr}_valgrind.xml`
 
     const sourcetestfolder = path.join(dataFolder, nbr)
     const testfolder = path.join(HOME, nbr)
@@ -64,6 +66,7 @@ class CTestRunner {
     const testfile = path.join(HOME, nbr, rtestfile)
     const resultfile = path.join(HOME, nbr, rresultfile)
     const junitfile = path.join(HOME, nbr, rjunitfile)
+    const valgrindfile = path.join(HOME, nbr, rvalgrindfile)
 
     // on ajoute le contenu du test à la fin du fichier étudiant,
     // après avoir désactivé la fonction main
@@ -73,6 +76,7 @@ class CTestRunner {
       // si on a besoin de faire référence au fichier lui-même (peu probable)
       .replace(/moduletotest/g, nbr)
 
+    const contentLength = content.split('\n').length
     testcontent = `const char __TEST_FILE_PATH[] = "${rresultfile}";\n${testcontent}`
 
     content += `\n${testcontent}`
@@ -99,7 +103,8 @@ class CTestRunner {
       // FIXME: we should probably put that into docker too
       const compileParams = [
         timeout,
-        'gcc-9', '-fdiagnostics-format=json', runityC, rtestfile,
+        'gcc-9', '-lm', '-ggdb', '-fdiagnostics-format=json',
+        runityC, rtestfile,
         '-o', rbinaryfile
       ]
       debug('compileParams', compileParams)
@@ -146,6 +151,11 @@ class CTestRunner {
         '--entrypoint', '/usr/bin/timeout',
         'hephaistos',
         timeout,
+        '/usr/bin/valgrind',
+        '--quiet',
+        '--leak-check=full',
+        '--xml=yes',
+        `--xml-file=${valgrindfile}`,
         binaryfile
       ]
       debug('params', params)
@@ -157,15 +167,49 @@ class CTestRunner {
       debug('run.stderr: ', stderr)
       debug('run.exitCode: ', exitCode)
 
-      if (exitCode !== 0) {
-        const result = await readFile(resultfile, 'utf8')
-        debug('result file\n', result)
+      const rubyParams = [
+        path.join(scriptsFolder, 'stylize_as_junit.rb'),
+        '-r', testfolder,
+        '-o', rjunitfile
+      ]
+
+      const runj = spawn('/usr/bin/ruby', rubyParams, { cwd: testfolder })
+      const junitOutput = await getOutput(runj, 'junit conversion')
+
+      let result = null
+
+      try {
+        const result_ = await readFile(junitfile, 'utf8')
+        debug('result_', result)
+        result = await JUnitXMLFileToJson(this.replaceLabel(result_, nbr))
+
+        debug('result', JSON.stringify(result, null, 2))
+      } catch (err) {
+        result = null
+      }
+
+      try {
+        let valgrind = await readFile(valgrindfile, 'utf8')
+        debug('valgrind', valgrind)
+        valgrind = await ValgrindXMLFileToJson(this.replaceLabel(valgrind, nbr))
+
+        debug('valgrind parsed', JSON.stringify(valgrind, null, 2))
+        debug('contentLength', contentLength)
+        // only keep user-concerned issues, not tests issues
+        valgrind = valgrind.filter(v => v.line <= contentLength)
+        if (valgrind) {
+          result.tests.push(...valgrind)
+          result.stats.failures += valgrind.length
+          result.stats.tests += valgrind.length
+        }
+      } catch (err) {
+        debug('err', err)
       }
 
       if (exitCode === 124) {
         debug('Timeout')
         return {
-          result: null,
+          result,
           error: 'timeout',
           stdout: this.replaceLabel(stdout, nbr),
           stderr: this.replaceLabel(stderr, nbr),
@@ -176,7 +220,7 @@ class CTestRunner {
       if (exitCode === 139) {
         debug('Segmentation fault')
         return {
-          result: null,
+          result,
           error: 'segfault',
           stdout: this.replaceLabel(stdout, nbr),
           stderr: this.replaceLabel(stderr, nbr),
@@ -184,37 +228,23 @@ class CTestRunner {
         }
       }
 
-      const rubyParams = [
-        path.join(scriptsFolder, 'stylize_as_junit.rb'),
-        '-r', testfolder,
-        '-o', rjunitfile
-      ]
-
-      const runj = spawn('/usr/bin/ruby', rubyParams, { cwd: testfolder })
-      const junitOutput = await getOutput(runj, 'junit conversion')
-
-      try {
-        const result = await readFile(junitfile, 'utf8')
-        const norm = await XMLFileToJson(this.replaceLabel(result, nbr))
-
-        debug('result', JSON.stringify(norm, null, 2))
-
+      if (result !== null) {
         return {
-          result: norm,
+          result,
           stdout: this.replaceLabel(stdout, nbr),
           stderr: this.replaceLabel(stderr, nbr),
           compil: null
         }
-      } catch (err) {
-        debug('junit output error', junitOutput.stderr)
-        debug('junit output', junitOutput.stdout)
-        return {
-          result: null,
-          error: 'junit',
-          stdout: this.replaceLabel(stdout, nbr),
-          stderr: this.replaceLabel(stderr, nbr),
-          compil: null
-        }
+      }
+
+      debug('junit output error', junitOutput.stderr)
+      debug('junit output', junitOutput.stdout)
+      return {
+        result: null,
+        error: 'junit',
+        stdout: this.replaceLabel(stdout, nbr),
+        stderr: this.replaceLabel(stderr, nbr),
+        compil: null
       }
     } finally {
       await rimraf(testfolder)
