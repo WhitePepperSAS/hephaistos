@@ -72,7 +72,7 @@ ENV DEBUG=hephaistos:*
 ENV PORT=8080
 # ENV HEPH_PYTHON_FILES=python
 # ENV HEPH_PYTHON_TIMEOUT=5s
-ENV HEPHAISTOS_FOLDER=/hephaistos
+ENV HEPHAISTOS_FOLDER=/data/prod/hephaistos-data
 
 EXPOSE 8080
 ENTRYPOINT ["node", "./hephaistos.js"]
