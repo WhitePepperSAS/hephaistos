@@ -200,11 +200,17 @@ class CTestRunner {
           debug('contentLength', contentLength)
           debug('valgrind parsed', JSON.stringify(valgrind, null, 2))
           // only add valgrind results if the other tests didn't pass
+          if (!result.stats) {
+            result.stats = {
+              errors: 0,
+              failures: 0,
+              tests: 0,
+              time: 0,
+              timestamp: 0
+            }
+          }
           if (valgrind.length) {
-            if (result &&
-              result.stats &&
-              !result.stats.failures &&
-              !result.stats.errors) {
+            if (result && !result.tests.length) {
               result.tests.push(...valgrind)
               result.stats.failures += valgrind.length
               result.stats.tests += valgrind.length
