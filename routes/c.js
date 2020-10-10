@@ -23,14 +23,18 @@ router.post('/analyze', async ({ body: { content } }, res, next) => {
   }
 })
 
-router.post('/test', async ({ body: { content, test, timeout = '5s' } }, res, next) => {
+router.post('/test', async ({ body: { content, test, timeout = '5s', ...body } }, res, next) => {
   try {
     content = Buffer.from(content, 'base64').toString()
     test = Buffer.from(test, 'base64').toString()
     debug('content:\n', content)
     debug('test:\n', test)
+    const options = body.options || { valgrind: false }
+    options.timeout = timeout
+    options.useValgrind = options.valgrind
+    debug('options', options, body.options)
 
-    const output = await CTestRunner.test(content, test, timeout)
+    const output = await CTestRunner.test(content, test, options)
 
     debug('result', output.result)
 

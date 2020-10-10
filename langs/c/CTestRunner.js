@@ -45,7 +45,7 @@ class CTestRunner {
    * ensuite on lance les tests unitaires avec ./<nom du fichier>.bin
    * enfin récupérer les résultats et les parser
    */
-  static async test (content, testcontent, timeout = '5s') {
+  static async test (content, testcontent, { timeout = '5s', useValgrind = false }) {
     if (!timeout.match(/^[0-9]{1,2}s$/)) {
       return {
         error: 'Timeout is not in the right format'
@@ -77,6 +77,7 @@ class CTestRunner {
       .replace(/moduletotest/g, nbr)
 
     const contentLength = content.split('\n').length
+
     testcontent = `const char __TEST_FILE_PATH[] = "${rresultfile}";\n${testcontent}`
 
     content += `\n${testcontent}`
@@ -141,6 +142,14 @@ class CTestRunner {
         }
       }
 
+      const valgrindOpts = useValgrind ? [
+        '/usr/bin/valgrind',
+        '--quiet',
+        '--leak-check=full',
+        '--xml=yes',
+        `--xml-file=${valgrindfile}`
+      ] : []
+
       const params = [
         'run',
         '--rm',
@@ -151,11 +160,7 @@ class CTestRunner {
         '--entrypoint', '/usr/bin/timeout',
         'hephaistos',
         timeout,
-        '/usr/bin/valgrind',
-        '--quiet',
-        '--leak-check=full',
-        '--xml=yes',
-        `--xml-file=${valgrindfile}`,
+        ...valgrindOpts,
         binaryfile
       ]
       debug('params', params)
@@ -188,22 +193,48 @@ class CTestRunner {
         result = null
       }
 
-      try {
-        let valgrind = await readFile(valgrindfile, 'utf8')
-        debug('valgrind', valgrind)
-        valgrind = await ValgrindXMLFileToJson(this.replaceLabel(valgrind, nbr))
-
-        debug('valgrind parsed', JSON.stringify(valgrind, null, 2))
-        debug('contentLength', contentLength)
-        // only keep user-concerned issues, not tests issues
-        valgrind = valgrind.filter(v => v.line <= contentLength)
-        if (valgrind) {
-          result.tests.push(...valgrind)
-          result.stats.failures += valgrind.length
-          result.stats.tests += valgrind.length
+      if (useValgrind) {
+        try {
+          let valgrind = await readFile(valgrindfile, 'utf8')
+          valgrind = await ValgrindXMLFileToJson(this.replaceLabel(valgrind, nbr), contentLength)
+          debug('contentLength', contentLength)
+          debug('valgrind parsed', JSON.stringify(valgrind, null, 2))
+          // only add valgrind results if the other tests didn't pass
+          if (valgrind.length) {
+            if (result &&
+              result.stats &&
+              !result.stats.failures &&
+              !result.stats.errors) {
+              result.tests.push(...valgrind)
+              result.stats.failures += valgrind.length
+              result.stats.tests += valgrind.length
+            } else {
+              result.tests.push({
+                file: undefined,
+                line: NaN,
+                name: 'verify_memory_leak',
+                time: 0,
+                placeholder: true,
+                failure: {
+                  stacktrace: '',
+                  message: 'Validate all tests before checking memory leaks'
+                }
+              })
+              result.stats.tests += 1
+            }
+          } else {
+            result.tests.push({
+              file: undefined,
+              line: NaN,
+              name: 'verify_memory_leak',
+              time: 0,
+              failure: undefined
+            })
+            result.stats.tests += 1
+          }
+        } catch (err) {
+          debug('err', err)
         }
-      } catch (err) {
-        debug('err', err)
       }
 
       if (exitCode === 124) {
