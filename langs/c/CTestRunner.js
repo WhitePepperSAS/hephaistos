@@ -172,8 +172,12 @@ class CTestRunner {
         unlink(path.join(testfolder, runityC)),
         unlink(path.join(testfolder, runityH)),
         unlink(path.join(testfolder, runityInternalsH)),
-        unlink(path.join(testfolder, runityConfigH))
+        unlink(path.join(testfolder, runityConfigH)),
+        chmod(path.join(testfolder, rresultfile), '222'),
+        chmod(path.join(testfolder, rbinaryfile), '111')
       ])
+
+      debug('unlink source files')
 
       const run = spawn('/usr/bin/docker', params, { cwd: process.env.HOME })
 
@@ -187,6 +191,9 @@ class CTestRunner {
         '-r', testfolder,
         '-o', rjunitfile
       ]
+
+      await chmod(testfolder, '777')
+      await chmod(path.join(testfolder, rresultfile), '444')
 
       const runj = spawn('/usr/bin/ruby', rubyParams, { cwd: testfolder })
       const junitOutput = await getOutput(runj, 'junit conversion')
@@ -294,6 +301,9 @@ class CTestRunner {
         compil: null
       }
     } finally {
+      await Promise.all([
+        chmod(testfolder, '777')
+      ])
       await rimraf(testfolder)
     }
   }
