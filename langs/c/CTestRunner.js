@@ -104,8 +104,8 @@ class CTestRunner {
       // FIXME: we should probably put that into docker too
       const compileParams = [
         timeout,
-        'gcc-9', '-lm', '-ggdb', '-fdiagnostics-format=json',
-        runityC, rtestfile,
+        'gcc-9', '-ggdb', '-fdiagnostics-format=json',
+        runityC, rtestfile, '-lm',
         '-o', rbinaryfile
       ]
       debug('compileParams', compileParams)
