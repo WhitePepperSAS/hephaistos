@@ -6,6 +6,7 @@ const readFile = promisify(fs.readFile)
 const mkdir = promisify(fs.mkdir)
 const chmod = promisify(fs.chmod)
 const copyFile = promisify(fs.copyFile)
+const unlink = promisify(fs.unlink)
 const getOutput = require('../../utils/getOutput.js')
 const path = require('path')
 const { spawn } = require('child_process')
@@ -164,6 +165,15 @@ class CTestRunner {
         binaryfile
       ]
       debug('params', params)
+
+      // delete source code files before run to avoid helping listing files
+      await Promise.all([
+        unlink(testfile),
+        unlink(path.join(testfolder, runityC)),
+        unlink(path.join(testfolder, runityH)),
+        unlink(path.join(testfolder, runityInternalsH)),
+        unlink(path.join(testfolder, runityConfigH))
+      ])
 
       const run = spawn('/usr/bin/docker', params, { cwd: process.env.HOME })
 
