@@ -174,7 +174,7 @@ class CTestRunner {
         unlink(path.join(testfolder, runityInternalsH)),
         unlink(path.join(testfolder, runityConfigH)),
         chmod(path.join(testfolder, rresultfile), '222'),
-        chmod(path.join(testfolder, rbinaryfile), '111')
+        chmod(path.join(testfolder, rbinaryfile), '777')
       ])
 
       debug('unlink source files')
