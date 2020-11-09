@@ -1,6 +1,7 @@
 CWD := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
+DOCKER_GROUP_ID := $(shell cut -d: -f3 | getent group docker)
 build:
-	docker build -t hephaistos .
+	docker build -t hephaistos --build-arg docker_group_id=$(DOCKER_GROUP_ID) .
 	mkdir -p ./data
 	chmod 777 -R ./data
 start:

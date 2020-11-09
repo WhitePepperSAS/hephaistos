@@ -1,5 +1,6 @@
 FROM node:buster-slim
 WORKDIR /app
+ARG docker_group_id
 
 RUN echo 'deb http://deb.debian.org/debian testing main' > /etc/apt/sources.list.d/testing.list
 RUN echo 'Package: *\n\
@@ -35,6 +36,7 @@ RUN apt-get update && \
     adduser --disabled-password --gecos "" defaultuser && \
     usermod -a -G defaultuser root && \
     usermod -a -G docker defaultuser && \
+    groupmod -g "${docker_group_id}" docker && \
     chown root:defaultuser -R /app
 # 740 = RWX R-- ---
 # 633 = RW- -WX -WX
@@ -64,6 +66,8 @@ RUN ln -s /app/langs/c/options/vera.rules /usr/lib/vera++/profiles/platypus.rule
     chown root:defaultuser -R /scripts/cppcheck && \
     mkdir -p /hephaistos/data && \
     chmod 777 -R /hephaistos
+
+RUN chown root:defaultuser -R /app
 
 USER defaultuser
 RUN npm install --production
